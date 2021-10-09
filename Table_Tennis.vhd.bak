@@ -1,0 +1,163 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+
+entity Table_Tennis is
+	port(
+	      click, clk, reset:in std_logic;
+			HEX0, HEX1:out std_logic_vector(6 downto 0);
+			LED:out std_logic_vector(9 downto 0)
+			);
+end Table_Tennis;
+
+architecture Table_Tennis of Table_Tennis is
+
+		component clk_2HZ is		-- 週期為0.5秒 --
+			port(
+				  clk:in std_logic;
+				  clk2:out std_logic);
+		end component;
+		
+		type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10,
+							S11, S12, S13, S14, S15, S16, S17, S18, S19);
+		signal Present_State : State;
+		signal Next_State : State;
+		signal clk2, score:std_logic;
+		signal scorecnt:std_logic_vector(7 downto 0);
+		
+begin
+		
+U1: clk_2HZ port map(clk, clk2);
+
+		process(clk2, reset)
+			begin
+				if reset = '0' then
+					Present_State <= S0;
+				elsif clk2'event and clk2 = '1' then
+					Present_state <= Next_state;
+				end if;
+		end process;
+		
+		process(Present_state, click)
+			begin
+				case Present_state is
+					when S0 =>
+							if click = '0' then		-- click = '0' 代表揮擊成功 --
+								Next_state <= S1;
+							else
+						      Next_state <= S0;		-- click = '1' 代表揮擊失敗 --
+							end if;
+							LED <= "0000000000";
+							score <= '0';
+					when S1 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S2;
+							LED <= "0000000001";
+					when S2 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S3;
+							LED <= "0000000010";		
+					when S3 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S4;
+							LED <= "0000000100";
+					when S4 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S5;
+							LED <= "0000001000";
+					when S5 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S6;
+							LED <= "0000010000";
+					when S6 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S7;
+							LED <= "0000100000";		
+					when S7 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S8;
+							LED <= "0001000000";
+					when S8 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S9;
+							LED <= "0010000000";
+					when S9 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S10;
+							LED <= "0100000000";
+					when S10 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S11;
+							LED <= "1000000000";		
+					when S11 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S12;
+							LED <= "0100000000";
+					when S12 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S13;
+							LED <= "0010000000";
+					when S13 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S14;
+							LED <= "0001000000";
+					when S14 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S15;
+							LED <= "0000100000";		
+					when S15 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S16;
+							LED <= "0000010000";
+					when S16 =>							-- Entering the Next_State unconditionally --
+							Next_state <= S17;
+							LED <= "0000001000";
+					when S17 =>
+					      if click = '0' then		-- click = '0' 代表提前揮擊(失敗) --
+							   Next_state <= S0;
+							else
+								Next_state <= S18;	-- click = '1' 代表無提前揮擊(進入S18) --
+							end if;	
+							LED <= "0000000100";
+							score <= '0';
+					when S18 =>
+					      if click = '0' then		-- click = '0' 代表提前揮擊(失敗) --
+							   Next_state <= S0;
+							else
+								Next_state <= S19;	-- click = '1' 代表無提前揮擊(進入S19) --
+							end if;	
+							LED <= "0000000010";
+							score <= '0';	
+					when S19 =>
+					      if click = '0' then		-- click = '0' 代表揮擊成功 --
+							   Next_state <= S2;
+								score <= '1';
+							else
+								Next_state <= S0; 	-- click = '1' 代表揮擊失敗 --
+								score <= '0';
+							end if;	
+							LED <= "0000000001";								
+				end case;
+		end process;
+	
+		process(score)
+			begin
+				if reset = '0' or scorecnt(7 downto 4) = "1001" then
+					scorecnt(7 downto 4) <= "0000";
+				elsif score'event and score = '1' then
+					scorecnt(7 downto 4) <= scorecnt(7 downto 4) + 1;
+				elsif score'event and score = '1' and scorecnt(7 downto 4) = "1001" then
+					scorecnt(3 downto 0) <= scorecnt(3 downto 0) + 1;
+				end if;
+		end process;
+		-- 1代表High(無電位差)為暗，0代表Low(有電位差)為亮 --
+		HEX0 <=  "1000000" when scorecnt(7 downto 4) = "0000" else
+					"1111001" when scorecnt(7 downto 4) = "0001" else
+					"0100100" when scorecnt(7 downto 4) = "0010" else
+					"0110000" when scorecnt(7 downto 4) = "0011" else
+					"0011001" when scorecnt(7 downto 4) = "0100" else
+					"0010010" when scorecnt(7 downto 4) = "0101" else
+					"0000010" when scorecnt(7 downto 4) = "0110" else
+					"1111000" when scorecnt(7 downto 4) = "0111" else
+					"0000000" when scorecnt(7 downto 4) = "1000" else
+					"0010000" when scorecnt(7 downto 4) = "1001" else
+					"1111111";
+					
+		HEX1 <=  "1000000" when scorecnt(3 downto 0) = "0000" else
+					"1111001" when scorecnt(3 downto 0) = "0001" else
+					"0100100" when scorecnt(3 downto 0) = "0010" else
+					"0110000" when scorecnt(3 downto 0) = "0011" else
+					"0011001" when scorecnt(3 downto 0) = "0100" else
+					"0010010" when scorecnt(3 downto 0) = "0101" else
+					"0000010" when scorecnt(3 downto 0) = "0110" else
+					"1111000" when scorecnt(3 downto 0) = "0111" else
+					"0000000" when scorecnt(3 downto 0) = "1000" else
+					"0010000" when scorecnt(3 downto 0) = "1001" else
+					"1111111";
+		
+end Table_Tennis;	
